@@ -1,5 +1,6 @@
 export const path = {
-  ROOT: "/"
+  ROOT: "/",
+  HOME: "/home"
 }
 
 export const pathWithSlug = {}

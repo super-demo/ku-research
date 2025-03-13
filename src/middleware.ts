@@ -1,15 +1,15 @@
 import { withAuth } from "next-auth/middleware"
-// import { NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 
 const PATH_ACCESSIBLE = ["/sign"]
 
 export default withAuth(
-  // function middleware(req) {
-  //   const token = req.nextauth.token
-  //   if (token && req.nextUrl.pathname === "/") {
-  //     return NextResponse.redirect(new URL("/", req.url))
-  //   }
-  // },
+  function middleware(req) {
+    const token = req.nextauth.token
+    if (token && req.nextUrl.pathname === "/") {
+      return NextResponse.redirect(new URL("/home", req.url))
+    }
+  },
   {
     secret: process.env.NEXTAUTH_SECRET,
     callbacks: {
