@@ -20,10 +20,10 @@ export function SignForm({
               <div className="flex h-8 w-8 items-center justify-center rounded-md">
                 <GalleryVerticalEnd className="size-6" />
               </div>
-              <span className="sr-only">Ku Vijai</span>
+              <span className="sr-only">Ku Research</span>
             </div>
             <h1 className="text-xl font-bold">
-              Welcome to Ku Vijai (Mini App)
+              Welcome to Ku Research (Mini App)
             </h1>
           </div>
           <div className="flex flex-col gap-3">

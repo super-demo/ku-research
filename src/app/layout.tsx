@@ -4,8 +4,8 @@ import { Providers } from "@/components/providers"
 import "@/styles/globals.css"
 
 export const metadata: Metadata = {
-  title: "Ku Vijai",
-  description: "Ku Vijai"
+  title: "Ku Research",
+  description: "Ku Research is a research project"
 }
 
 export default function RootLayout({

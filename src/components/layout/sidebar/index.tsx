@@ -38,7 +38,7 @@ export default function SidebarLayout({
               <GalleryVerticalEnd className="size-4" />
             </div>
             <div className="flex flex-col gap-0.5 leading-none">
-              <span className="font-semibold">Ku Vijai (MiniApp)</span>
+              <span className="font-semibold">Ku Research (MiniApp)</span>
               <span className="">v{packageJson.version}</span>
             </div>
           </Link>
