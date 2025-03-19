@@ -1,8 +1,10 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-
-import type React from "react"
+import { AlertCircle, Loader2, Plus, Upload, X } from "lucide-react"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { useRef, useState } from "react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -19,15 +21,39 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useMediaQuery } from "@/hooks/use-mobile"
-import { AlertCircle, Loader2, Plus, Upload, X } from "lucide-react"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
-import { useResearch } from "../../_components/research-provider"
+import { researchApi } from "../../../../api/paper/routes"
 
-export default function AddResearchForm() {
+// Predefined fields and classifications for dropdown options
+const PREDEFINED_FIELDS = [
+  "Computer Science",
+  "Biology",
+  "Chemistry",
+  "Physics",
+  "Mathematics",
+  "Medicine",
+  "Engineering",
+  "Psychology",
+  "Economics",
+  "other"
+]
+
+const PREDEFINED_CLASSIFICATIONS = [
+  "AI",
+  "Machine Learning",
+  "Data Science",
+  "Natural Language Processing",
+  "Computer Vision",
+  "Blockchain",
+  "Quantum Computing",
+  "Genetics",
+  "Neuroscience",
+  "Robotics",
+  "Sustainable Energy",
+  "Climate Science"
+]
+
+export default function AddResearchPaper() {
   const router = useRouter()
-  const { fields, classifications, addPaper } = useResearch()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -43,8 +69,7 @@ export default function AddResearchForm() {
     classifications: [] as string[],
     doi: "",
     journal: "",
-    coverImage:
-      "https://scontent-bkk1-2.xx.fbcdn.net/v/t39.30808-6/476509205_555409170843779_2189911961991409505_n.jpg?stp=dst-jpg_s1080x2048_tt6&_nc_cat=107&ccb=1-7&_nc_sid=cc71e4&_nc_ohc=dvVyY7fKDE4Q7kNvgEUsxY5&_nc_oc=Adm7pMZkVfAy3GQbposPMK9VpKk81CyRhNdrr2JqPgAp0TnQlYyuOJT7nelQ2oDVmBM&_nc_zt=23&_nc_ht=scontent-bkk1-2.xx&_nc_gid=eBOCDkseztFEgrAKMda5Xg&oh=00_AYGH3QWile1EBMI5YsbJZHdZDO8Ut6TAyNEjyCzqITjDEw&oe=67DF7CDD"
+    coverImage: "/placeholder.svg?height=600&width=400&text="
   })
 
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -160,14 +185,13 @@ export default function AddResearchForm() {
     try {
       setIsSubmitting(true)
 
-      // Add the paper
-      await addPaper({
+      // Submit the paper using the API service
+      await researchApi.addPaper({
         ...formData,
-        id: Date.now().toString(), // Generate a simple ID
         publishedYear: Number(formData.publishedYear)
       })
 
-      // Redirect to home page
+      // Redirect to home page on success
       router.push("/")
     } catch (err) {
       setError("Failed to add research paper. Please try again.")
@@ -197,14 +221,11 @@ export default function AddResearchForm() {
             <div className="space-y-4">
               <Label>Cover Image</Label>
               <div className="flex flex-col items-center gap-4">
-                <div className="relative mx-auto aspect-[3/4] w-full max-w-[200px] overflow-hidden rounded-md border bg-slate-800">
+                <div className="relative mx-auto aspect-[3/4] w-full max-w-[200px] overflow-hidden rounded-md border bg-slate-100">
                   {imagePreview ? (
                     <>
                       <Image
-                        src={
-                          imagePreview ||
-                          "https://scontent-bkk1-2.xx.fbcdn.net/v/t39.30808-6/476509205_555409170843779_2189911961991409505_n.jpg?stp=dst-jpg_s1080x2048_tt6&_nc_cat=107&ccb=1-7&_nc_sid=cc71e4&_nc_ohc=dvVyY7fKDE4Q7kNvgEUsxY5&_nc_oc=Adm7pMZkVfAy3GQbposPMK9VpKk81CyRhNdrr2JqPgAp0TnQlYyuOJT7nelQ2oDVmBM&_nc_zt=23&_nc_ht=scontent-bkk1-2.xx&_nc_gid=eBOCDkseztFEgrAKMda5Xg&oh=00_AYGH3QWile1EBMI5YsbJZHdZDO8Ut6TAyNEjyCzqITjDEw&oe=67DF7CDD"
-                        }
+                        src={imagePreview}
                         alt="Cover preview"
                         fill
                         className="object-cover"
@@ -312,12 +333,11 @@ export default function AddResearchForm() {
                   <SelectValue placeholder="Select a field" />
                 </SelectTrigger>
                 <SelectContent>
-                  {fields.map((field) => (
+                  {PREDEFINED_FIELDS.map((field) => (
                     <SelectItem key={field} value={field}>
                       {field}
                     </SelectItem>
                   ))}
-                  <SelectItem value="other">Add New Field...</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -409,7 +429,7 @@ export default function AddResearchForm() {
             <div className="mt-2">
               <Label className="text-sm">Existing Classifications</Label>
               <div className="mt-1 flex flex-wrap gap-2">
-                {classifications.map((classification) => (
+                {PREDEFINED_CLASSIFICATIONS.map((classification) => (
                   <Badge
                     key={classification}
                     variant={
