@@ -82,14 +82,11 @@ export function ResearchDetail({
               <Image
                 src={
                   paper.coverImage ||
-                  "https://scontent-bkk1-2.xx.fbcdn.net/v/t39.30808-6/476509205_555409170843779_2189911961991409505_n.jpg?stp=dst-jpg_s1080x2048_tt6&_nc_cat=107&ccb=1-7&_nc_sid=cc71e4&_nc_ohc=dvVyY7fKDE4Q7kNvgEUsxY5&_nc_oc=Adm7pMZkVfAy3GQbposPMK9VpKk81CyRhNdrr2JqPgAp0TnQlYyuOJT7nelQ2oDVmBM&_nc_zt=23&_nc_ht=scontent-bkk1-2.xx&_nc_gid=eBOCDkseztFEgrAKMda5Xg&oh=00_AYGH3QWile1EBMI5YsbJZHdZDO8Ut6TAyNEjyCzqITjDEw&oe=67DF7CDD"
+                  "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/icons/file-text.svg"
                 }
                 alt={paper.title}
                 fill
-                className={cn(
-                  "rounded-md object-cover",
-                  !isDataUrl && "bg-slate-800" // Dark background for research papers
-                )}
+                className={cn("rounded-md object-cover")}
                 sizes="(max-width: 768px) 200px, 300px"
               />
             </div>

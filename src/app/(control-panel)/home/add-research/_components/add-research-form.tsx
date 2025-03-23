@@ -70,7 +70,8 @@ export default function AddResearchPaper() {
     classifications: [] as string[],
     doi: "",
     journal: "",
-    coverImage: "/placeholder.svg?height=600&width=400&text="
+    coverImage:
+      "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/icons/file-text.svg"
   })
 
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -142,7 +143,8 @@ export default function AddResearchPaper() {
     setImagePreview(null)
     setFormData((prev) => ({
       ...prev,
-      coverImage: "/placeholder.svg?height=600&width=400&text="
+      coverImage:
+        "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/icons/file-text.svg"
     }))
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
