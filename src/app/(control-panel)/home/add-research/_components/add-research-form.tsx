@@ -55,6 +55,7 @@ const PREDEFINED_CLASSIFICATIONS = [
 export default function AddResearchPaper() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [newClassification, setNewClassification] = useState("")
@@ -86,7 +87,7 @@ export default function AddResearchPaper() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setImageError("")
     const file = e.target.files?.[0]
 
@@ -104,13 +105,37 @@ export default function AddResearchPaper() {
       return
     }
 
+    // Show preview immediately
     const reader = new FileReader()
     reader.onload = (event) => {
       const result = event.target?.result as string
       setImagePreview(result)
-      setFormData((prev) => ({ ...prev, coverImage: result }))
     }
     reader.readAsDataURL(file)
+
+    // Upload to Google Drive
+    try {
+      setIsUploading(true)
+      const uploadFormData = new FormData()
+      uploadFormData.append("file", file)
+
+      const response = await fetch("/api/uploader", {
+        method: "POST",
+        body: uploadFormData
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to upload image")
+      }
+
+      const data = await response.json()
+      setFormData((prev) => ({ ...prev, coverImage: data.imageUrl }))
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      setImageError("Failed to upload image. Please try again.")
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleRemoveImage = () => {
@@ -160,6 +185,12 @@ export default function AddResearchPaper() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    // Prevent submission if an image is still uploading
+    if (isUploading) {
+      setError("Please wait for image upload to complete")
+      return
+    }
 
     // Basic validation
     if (!formData.title.trim()) {
@@ -228,14 +259,20 @@ export default function AddResearchPaper() {
                         src={imagePreview}
                         alt="Cover preview"
                         fill
-                        className="object-cover"
+                        className={`object-cover ${isUploading ? "opacity-50" : ""}`}
                       />
+                      {isUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
+                        </div>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         className="bg-background/80 absolute top-2 right-2 h-8 w-8 rounded-full backdrop-blur-sm"
                         onClick={handleRemoveImage}
+                        disabled={isUploading}
                       >
                         <X className="h-4 w-4" />
                         <span className="sr-only">Remove image</span>
@@ -247,6 +284,9 @@ export default function AddResearchPaper() {
                       <p className="text-muted-foreground text-sm">
                         Drag & drop or click to upload
                       </p>
+                      {isUploading && (
+                        <div className="border-primary mt-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -258,6 +298,7 @@ export default function AddResearchPaper() {
                     accept="image/*"
                     onChange={handleImageChange}
                     className="cursor-pointer text-sm"
+                    disabled={isUploading}
                   />
                   {imageError && (
                     <p className="text-destructive mt-1 text-sm">
@@ -452,15 +493,21 @@ export default function AddResearchPaper() {
               type="button"
               variant="outline"
               onClick={() => router.push("/")}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && (
+            <Button type="submit" disabled={isSubmitting || isUploading}>
+              {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading Image...
+                </>
+              ) : (
+                "Add Research Paper"
               )}
-              Add Research Paper
             </Button>
           </div>
         </form>

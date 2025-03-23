@@ -1,16 +1,24 @@
 import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 
-import { GetUserProfile, GoogleSignIn } from "@/app/api/user/actions"
 import config from "@/config"
 import { DecodeJwt } from "@/lib/decode-jwt"
+import { GetUserProfile, GoogleSignIn } from "../../user/actions"
 
 const authOption: NextAuthOptions = {
   secret: config.authSecret,
   providers: [
     GoogleProvider({
       clientId: config.googleClientId,
-      clientSecret: config.googleClientSecret
+      clientSecret: config.googleClientSecret,
+      authorization: {
+        params: {
+          scope:
+            "openid email profile https://www.googleapis.com/auth/drive.file",
+          prompt: "consent",
+          access_type: "offline"
+        }
+      }
     })
   ],
   callbacks: {
@@ -42,7 +50,8 @@ const authOption: NextAuthOptions = {
           accessToken: googleSignInResponse.data.access_token as string,
           expiresAt: googleSignInResponse.data.expires_at as number,
           userId: userProfile.user_id,
-          userLevelId: userProfile.user_level_id
+          userLevelId: userProfile.user_level_id,
+          googleSignInToken: account.access_token as string
         }
       } catch (error) {
         throw error
@@ -57,6 +66,7 @@ const authOption: NextAuthOptions = {
           userLevelId: user.jwt.userLevelId,
           accessToken: user.jwt.accessToken,
           expiresAt: user.jwt.expiresAt,
+          googleSignInToken: user.jwt.googleSignInToken,
           user
         }
       }
@@ -69,6 +79,7 @@ const authOption: NextAuthOptions = {
     session: async ({ session, token }) => {
       const { userId, accessToken } = token
       const { data: userData } = await GetUserProfile(userId, accessToken)
+
       session.user = {
         image: userData.avatar_url,
         email: userData.email,
@@ -77,7 +88,8 @@ const authOption: NextAuthOptions = {
           accessToken: token.accessToken,
           expiresAt: token.expiresAt,
           userId: token.userId,
-          userLevelId: token.userLevelId
+          userLevelId: token.userLevelId,
+          googleSignInToken: token.googleSignInToken
         }
       }
       session.error = token.error
@@ -85,8 +97,8 @@ const authOption: NextAuthOptions = {
     }
   },
   pages: {
-    signIn: "/sign",
-    error: "/sign"
+    signIn: "/",
+    error: "/"
   }
 }
 

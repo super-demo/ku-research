@@ -5,7 +5,8 @@ import { userLevelId } from "@/constants/user-level"
 declare module "next-auth" {
   enum UserLevel {
     Root = userLevelId.ROOT,
-    Staff = userLevelId.DEVELOPER,
+    Staff = userLevelId.STAFF,
+    Owner = userLevelId.OWNER,
     SuperAdmin = userLevelId.SUPERADMIN,
     Admin = userLevelId.ADMIN,
     Member = userLevelId.MERBER
@@ -16,12 +17,14 @@ declare module "next-auth" {
     userLevelId: UserLevel
     accessToken: string
     expiresAt: number
+    googleSignInToken: string
   }
 
   interface User extends NextAuthUser {
     jwt: UserJWT
     userId: number
     userLevelId: UserLevel
+    googleSignInToken: string
   }
 
   interface Session {
@@ -34,6 +37,7 @@ declare module "next-auth" {
         userLevelId: UserLevel
         accessToken: string
         expiresAt: number
+        googleSignInToken: string
       }
     }
     error?: "AccessTokenError"
@@ -47,6 +51,7 @@ declare module "next-auth/jwt" {
     accessToken: string
     expiresAt: number
     user: User
+    googleSignInToken: string
     error?: "AccessTokenError"
   }
 }
