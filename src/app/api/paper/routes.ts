@@ -1,5 +1,5 @@
 export interface ResearchPaper {
-  id: string
+  id?: string
   title: string
   authors: string
   abstract: string
@@ -9,6 +9,17 @@ export interface ResearchPaper {
   classifications: string[]
   doi?: string
   journal?: string
+
+  // Visibility fields
+  userId?: number
+  isPublic: boolean
+  publicOption?: "workspace" | "site" | "everyone" | ""
+  workspaceSiteID?: number
+}
+
+export interface WorkspaceUser {
+  workspaceId: number
+  userId: number
 }
 
 export class ResearchApiService {
@@ -18,14 +29,14 @@ export class ResearchApiService {
     this.baseUrl = "http://localhost:8083"
   }
 
-  async getAllPapers(): Promise<ResearchPaper[]> {
+  async getAllPapers(userId: number): Promise<ResearchPaper[]> {
     try {
       const response = await fetch(`${this.baseUrl}/get-research`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({ userId })
       })
 
       if (!response.ok) {

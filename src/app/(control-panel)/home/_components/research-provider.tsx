@@ -1,5 +1,6 @@
 "use client"
 
+import { useSession } from "next-auth/react"
 import {
   createContext,
   useContext,
@@ -7,7 +8,7 @@ import {
   useState,
   type ReactNode
 } from "react"
-import { ResearchPaper, researchApi } from "../../../api/paper/routes"
+import { researchApi, ResearchPaper } from "../../../api/paper/routes"
 
 interface ResearchContextType {
   papers: ResearchPaper[]
@@ -34,12 +35,18 @@ export function useResearch() {
 }
 
 export function ResearchProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession()
   const [papers, setPapers] = useState<ResearchPaper[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
   const [fields, setFields] = useState<string[]>([])
   const [classifications, setClassifications] = useState<string[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Get userId from session
+  const userId = session?.user?.jwt?.userId
+    ? Number(session.user.jwt.userId)
+    : 0
 
   const extractMetadata = (papers: ResearchPaper[]) => {
     // Extract unique fields
@@ -56,10 +63,13 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      const fetchedPapers = await researchApi.getAllPapers()
+
+      // Use the userId from session to fetch papers
+      // This ensures access control via the backend
+      const fetchedPapers = await researchApi.getAllPapers(userId)
       setPapers(fetchedPapers)
       extractMetadata(fetchedPapers)
-    } catch (err) {
+    } catch (err: any) {
       setError("Failed to fetch papers. Please try again later.")
       console.error("Error fetching papers:", err)
     } finally {
@@ -74,9 +84,11 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
       setFavorites(JSON.parse(savedFavorites))
     }
 
-    // Fetch papers from API
-    refreshPapers()
-  }, [])
+    // Only fetch papers if session is loaded (not loading)
+    if (status !== "loading") {
+      refreshPapers()
+    }
+  }, [status, userId]) // Add userId as dependency to refetch when user changes
 
   const toggleFavorite = (id: string) => {
     const newFavorites = favorites.includes(id)
@@ -92,7 +104,14 @@ export function ResearchProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      const newPaper = await researchApi.addPaper(paperData)
+
+      // Ensure userId is set in the paper data
+      const paperWithUserId = {
+        ...paperData,
+        userId: userId
+      }
+
+      const newPaper = await researchApi.addPaper(paperWithUserId)
 
       // Update local state
       setPapers((prevPapers) => [...prevPapers, newPaper])

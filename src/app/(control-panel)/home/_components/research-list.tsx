@@ -1,3 +1,4 @@
+// ku-research/src/app/%28control-panel%29/home/_components/research-list.tsx
 "use client"
 
 import { useState } from "react"
