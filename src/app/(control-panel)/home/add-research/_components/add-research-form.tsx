@@ -1,12 +1,6 @@
 "use client"
 
-import { cn } from "@/lib/utils"
-import { AlertCircle, Loader2, Plus, Upload, X } from "lucide-react"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
-import { useRef, useState } from "react"
-
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,10 +14,15 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { useMediaQuery } from "@/hooks/use-mobile"
+import { AlertCircle, Loader2, Upload, X } from "lucide-react"
+import { useSession } from "next-auth/react"
+import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
 import { researchApi } from "../../../../api/paper/routes"
+import { SiteTree } from "../../../../api/site-tree/types"
 
-// Predefined fields and classifications for dropdown options
+// Predefined fields for dropdown options
 const PREDEFINED_FIELDS = [
   "Computer Science",
   "Biology",
@@ -37,6 +36,7 @@ const PREDEFINED_FIELDS = [
   "other"
 ]
 
+// Predefined classifications for dropdown options
 const PREDEFINED_CLASSIFICATIONS = [
   "AI",
   "Machine Learning",
@@ -54,12 +54,14 @@ const PREDEFINED_CLASSIFICATIONS = [
 
 export default function AddResearchPaper() {
   const router = useRouter()
+  const { data: session, status } = useSession()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [newClassification, setNewClassification] = useState("")
-  const isMobile = useMediaQuery("(max-width: 768px)")
+  const [workspaces, setWorkspaces] = useState<SiteTree[]>([])
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true)
 
   const [formData, setFormData] = useState({
     title: "",
@@ -71,11 +73,115 @@ export default function AddResearchPaper() {
     doi: "",
     journal: "",
     coverImage:
-      "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/icons/file-text.svg"
+      "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/icons/file-text.svg",
+
+    // Visibility-related fields
+    userId: session?.user?.jwt?.userId,
+    isPublic: false,
+    publicOption: "" as "workspace" | "site" | "everyone" | "",
+    workspaceSiteID: 0
   })
 
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageError, setImageError] = useState("")
+
+  // Get user ID from session and ensure it's a number
+  const userId = session?.user?.jwt?.userId
+    ? Number(session.user.jwt.userId)
+    : undefined
+
+  // For debug purposes, log the user ID
+  useEffect(() => {
+    if (userId) {
+      console.log("Current user ID:", userId)
+    } else {
+      console.log("No user ID available in session")
+    }
+  }, [userId])
+
+  const siteTree: SiteTree[] = [
+    {
+      site_id: 3,
+      name: "Science",
+      site_type_id: 1,
+      path: 101,
+      description: "",
+      short_description: "",
+      url: "",
+      image_url: "",
+      created_at: "",
+      updated_at: "",
+      updated_by: "",
+      created_by: "",
+      deleted_at: "",
+      site_parent_id: 0,
+      site_parent_name: "",
+      depth: 0
+    },
+    {
+      site_id: 8,
+      name: "Office",
+      site_type_id: 1,
+      path: 102,
+      description: "",
+      short_description: "",
+      url: "",
+      image_url: "",
+      created_at: "",
+      updated_at: "",
+      updated_by: "",
+      created_by: "",
+      deleted_at: "",
+      site_parent_id: 0,
+      site_parent_name: "",
+      depth: 0
+    },
+    {
+      site_id: 9,
+      name: "Nisit",
+      site_type_id: 1,
+      path: 201,
+      description: "",
+      short_description: "",
+      url: "",
+      image_url: "",
+      created_at: "",
+      updated_at: "",
+      updated_by: "",
+      created_by: "",
+      deleted_at: "",
+      site_parent_id: 0,
+      site_parent_name: "",
+      depth: 0
+    }
+  ]
+
+  // Fetch workspaces on component mount
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      try {
+        setIsLoadingWorkspaces(true)
+        // const siteTree = await GetListSiteTree()
+        console.log("Fetched site tree:", siteTree)
+
+        // Filter to only include workspaces (type_id = 1)
+        const workspacesOnly = siteTree
+          .filter((site) => site.site_type_id === 1)
+          .map((site) => ({
+            ...site,
+            path: typeof site.path === "number" ? site.path : 0 // Ensure 'path' is always a number
+          }))
+        setWorkspaces(workspacesOnly)
+      } catch (error) {
+        console.error("Failed to fetch workspaces:", error)
+        setError("Could not load workspaces. Please try again.")
+      } finally {
+        setIsLoadingWorkspaces(false)
+      }
+    }
+
+    fetchWorkspaces()
+  }, [])
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -84,7 +190,7 @@ export default function AddResearchPaper() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (name: string, value: string | number) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
@@ -111,32 +217,9 @@ export default function AddResearchPaper() {
     reader.onload = (event) => {
       const result = event.target?.result as string
       setImagePreview(result)
+      setFormData((prev) => ({ ...prev, coverImage: result }))
     }
     reader.readAsDataURL(file)
-
-    // Upload to Google Drive
-    try {
-      setIsUploading(true)
-      const uploadFormData = new FormData()
-      uploadFormData.append("file", file)
-
-      const response = await fetch("/api/uploader", {
-        method: "POST",
-        body: uploadFormData
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to upload image")
-      }
-
-      const data = await response.json()
-      setFormData((prev) => ({ ...prev, coverImage: data.imageUrl }))
-    } catch (error) {
-      console.error("Error uploading image:", error)
-      setImageError("Failed to upload image. Please try again.")
-    } finally {
-      setIsUploading(false)
-    }
   }
 
   const handleRemoveImage = () => {
@@ -184,9 +267,26 @@ export default function AddResearchPaper() {
     }
   }
 
+  const handlePublicOptionChange = (
+    value: "workspace" | "site" | "everyone"
+  ) => {
+    // Reset dependent fields when public option changes
+    setFormData((prev) => ({
+      ...prev,
+      publicOption: value,
+      workspaceSiteID: 0
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+
+    // Verify user is authenticated
+    if (!userId) {
+      setError("You must be logged in to add a research paper")
+      return
+    }
 
     // Prevent submission if an image is still uploading
     if (isUploading) {
@@ -215,23 +315,103 @@ export default function AddResearchPaper() {
       return
     }
 
+    // Additional validation for public options
+    if (formData.isPublic) {
+      if (!formData.publicOption) {
+        setError("Please select a public option")
+        return
+      }
+
+      if (
+        formData.publicOption === "workspace" &&
+        formData.workspaceSiteID === 0
+      ) {
+        setError("Please select a workspace")
+        return
+      }
+    }
+
     try {
       setIsSubmitting(true)
 
-      // Submit the paper using the API service
+      // Convert publishedYear to number if it's a string
+      const publishedYear =
+        typeof formData.publishedYear === "string"
+          ? parseInt(formData.publishedYear, 10)
+          : formData.publishedYear
+
+      // Create the payload with correct types
+      const paperData = {
+        title: formData.title,
+        authors: formData.authors,
+        abstract: formData.abstract,
+        coverImage: formData.coverImage,
+        publishedYear: publishedYear,
+        field: formData.field,
+        classifications: formData.classifications,
+        doi: formData.doi,
+        journal: formData.journal,
+        isPublic: formData.isPublic,
+        publicOption: formData.publicOption,
+        workspaceSiteID: formData.workspaceSiteID
+      }
+
+      console.log("Submitting paper data:", paperData)
+
+      // Initialize SDK with userId as a number
       await researchApi.addPaper({
         ...formData,
         publishedYear: Number(formData.publishedYear)
       })
+      console.log("🚀 ~ handleSubmit ~ formData:", formData)
 
-      // Redirect to home page on success
-      router.push("/")
-    } catch (err) {
-      setError("Failed to add research paper. Please try again.")
-      console.error(err)
+      // Redirect to the papers page
+      router.push("/home")
+    } catch (err: any) {
+      console.error("Error adding research paper:", err)
+      setError(
+        `Failed to add research paper: ${err.message || "Please try again."}`
+      )
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Show loading state while waiting for user data
+  if (status === "loading") {
+    return (
+      <Card className="mx-auto">
+        <CardContent className="pt-6">
+          <div className="flex flex-col items-center justify-center p-8">
+            <Loader2 className="text-primary h-8 w-8 animate-spin" />
+            <p className="text-muted-foreground mt-4 text-center">
+              Loading user data...
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Show error if not authenticated
+  if (status === "unauthenticated") {
+    return (
+      <Card className="mx-auto">
+        <CardContent className="pt-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Authentication Error</AlertTitle>
+            <AlertDescription>
+              You must be logged in to add a research paper. Please log in and
+              try again.
+            </AlertDescription>
+          </Alert>
+          <div className="mt-4 flex justify-end">
+            <Button onClick={() => router.push("/home")}>Return to Home</Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -241,16 +421,12 @@ export default function AddResearchPaper() {
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
-          <div
-            className={cn(
-              "grid gap-6",
-              isMobile ? "grid-cols-1" : "md:grid-cols-[1fr_2fr]"
-            )}
-          >
+          <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
             <div className="space-y-4">
               <Label>Cover Image</Label>
               <div className="flex flex-col items-center gap-4">
@@ -263,11 +439,6 @@ export default function AddResearchPaper() {
                         fill
                         className={`object-cover ${isUploading ? "opacity-50" : ""}`}
                       />
-                      {isUploading && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
-                        </div>
-                      )}
                       <Button
                         type="button"
                         variant="ghost"
@@ -286,9 +457,6 @@ export default function AddResearchPaper() {
                       <p className="text-muted-foreground text-sm">
                         Drag & drop or click to upload
                       </p>
-                      {isUploading && (
-                        <div className="border-primary mt-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -300,7 +468,6 @@ export default function AddResearchPaper() {
                     accept="image/*"
                     onChange={handleImageChange}
                     className="cursor-pointer text-sm"
-                    disabled={isUploading}
                   />
                   {imageError && (
                     <p className="text-destructive mt-1 text-sm">
@@ -465,7 +632,7 @@ export default function AddResearchPaper() {
                 onClick={handleAddClassification}
                 disabled={!newClassification.trim()}
               >
-                <Plus className="h-4 w-4" />
+                Add
               </Button>
             </div>
 
@@ -490,22 +657,112 @@ export default function AddResearchPaper() {
             </div>
           </div>
 
+          {/* Visibility Options Section */}
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Visibility *</Label>
+              <Select
+                value={formData.isPublic ? "public" : "not_public"}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    isPublic: value === "public",
+                    publicOption: value === "public" ? prev.publicOption : "" // Maintain public option if still public
+                  }))
+                }
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select visibility" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_public">Private (Only You)</SelectItem>
+                  <SelectItem value="public">Public</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Public options (only show if Public is selected) */}
+            {formData.isPublic && (
+              <div className="grid gap-2">
+                <Label>Public Access Option *</Label>
+                <Select
+                  value={formData.publicOption}
+                  onValueChange={(value) =>
+                    handlePublicOptionChange(
+                      value as "workspace" | "site" | "everyone"
+                    )
+                  }
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select public access option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="workspace">
+                      Specific Workspace
+                    </SelectItem>
+                    <SelectItem value="site">Site</SelectItem>
+                    <SelectItem value="everyone">Everyone</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Workspace Selection (only if workspace option selected) */}
+                {formData.publicOption === "workspace" && (
+                  <div className="mt-2 grid gap-2">
+                    <Label>Select Workspace *</Label>
+                    <Select
+                      value={
+                        formData.workspaceSiteID
+                          ? formData.workspaceSiteID.toString()
+                          : ""
+                      }
+                      onValueChange={(value) =>
+                        handleSelectChange("workspaceSiteID", parseInt(value))
+                      }
+                      disabled={isLoadingWorkspaces}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            isLoadingWorkspaces
+                              ? "Loading workspaces..."
+                              : "Choose a workspace"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workspaces.map((workspace) => (
+                          <SelectItem
+                            key={workspace.site_id}
+                            value={workspace.site_id.toString()}
+                          >
+                            {workspace.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push("/")}
-              disabled={isSubmitting || isUploading}
+              onClick={() => router.push("/home")}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploading}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : isUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading Image...
+                  Submitting...
                 </>
               ) : (
                 "Add Research Paper"

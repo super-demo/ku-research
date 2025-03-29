@@ -5,20 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { FileText, Heart } from "lucide-react"
+import { useSession } from "next-auth/react"
 import Image from "next/image"
-
-interface ResearchPaper {
-  id: string
-  title: string
-  authors: string
-  abstract: string
-  coverImage: string
-  publishedYear: number
-  field: string
-  classifications: string[]
-  doi?: string
-  journal?: string
-}
 
 interface ResearchCardProps {
   paper: ResearchPaper
@@ -33,8 +21,33 @@ export function ResearchCard({
   onFavorite,
   onClick
 }: ResearchCardProps) {
-  // Check if the image is a data URL (uploaded image)
-  const isDataUrl = paper.coverImage.startsWith("data:image/")
+  const { data: session } = useSession()
+  const userId = session?.user?.jwt?.userId
+    ? Number(session.user.jwt.userId)
+    : undefined
+
+  // Check if the current user is the owner
+  const isOwner = userId !== undefined && paper.owner === userId
+
+  // Determine visibility badge content
+  const getVisibilityBadge = () => {
+    if (!paper.isPublic) {
+      return { text: "Private", variant: "destructive" as const }
+    }
+
+    switch (paper.publicOption) {
+      case "workspace":
+        return { text: "Workspace", variant: "secondary" as const }
+      case "site":
+        return { text: "Organization", variant: "default" as const }
+      case "everyone":
+        return { text: "Public", variant: "outline" as const }
+      default:
+        return { text: "Unknown", variant: "outline" as const }
+    }
+  }
+
+  const visibilityBadge = getVisibilityBadge()
 
   return (
     <Card className="flex h-full flex-col overflow-hidden transition-all hover:shadow-md">
@@ -46,14 +59,19 @@ export function ResearchCard({
           }
           alt={paper.title}
           fill
-          className={cn("object-cover")}
-          sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          className="object-cover"
           priority
         />
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 right-2 left-2 flex items-center justify-between">
           <Badge variant="secondary" className="text-xs font-normal">
             {paper.field}
           </Badge>
+
+          {isOwner && (
+            <Badge variant="destructive" className="text-xs font-normal">
+              Your Paper
+            </Badge>
+          )}
         </div>
         <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/80 to-transparent p-3">
           <div className="flex flex-wrap gap-1">
@@ -94,6 +112,12 @@ export function ResearchCard({
                 <span className="max-w-[120px] truncate">{paper.journal}</span>
               </>
             )}
+          </div>
+
+          <div className="mt-1 flex items-center gap-1">
+            <Badge variant={visibilityBadge.variant} className="text-xs">
+              {visibilityBadge.text}
+            </Badge>
           </div>
         </div>
       </CardContent>

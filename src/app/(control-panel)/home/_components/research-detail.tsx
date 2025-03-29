@@ -1,3 +1,4 @@
+// ku-research/src/app/%28control-panel%29/home/_components/research-detail.tsx
 "use client"
 
 import { Badge } from "@/components/ui/badge"
